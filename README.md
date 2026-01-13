@@ -1,12 +1,12 @@
 # Lora Tag Manager
 
-## Easy management for Low Rank Adaption image captioning
+## Easy management for Low Rank Adaptation image captioning
 
 Lora Tag Manager is a GUI application made with python's tkinter library, whose purpose is to provide users with an efficient and user-friendly tool for captioning PNG images with TXT files and pairing them for use as a dataset for LoRA model training.
 
 ![example](https://github.com/user-attachments/assets/59686119-e470-4960-8dc0-50ef38b9ebce)
 
-Building a detailed dataset for Low Rank Adaption model training is integral to getting good results. However, the process is rather tedious. Training programs building out an initial batch of TXT files to caption PNG images can include the same irrelevant tag in a multitude of images for the dataset, or otherwise miss some obvious ones.
+Building a detailed dataset for Low Rank Adaptation model training is integral to getting good results. However, the process is rather tedious. Training programs building out an initial batch of TXT files to caption PNG images can include the same irrelevant tag in a multitude of images for the dataset, or otherwise miss some obvious ones.
 
 Amending this issue becomes an interminable task while using a traditional text editor, as one must individually scrutinize every TXT file for errors or missing details in their image captions. This issue becomes more evident as one's dataset grows (which, for best results, is ideal).
 
