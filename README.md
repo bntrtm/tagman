@@ -46,15 +46,3 @@ git clone https://github.com/bntrtm/lora-tag-manager.git
 4. Select the `Load` button in the top-left corner of the GUI window. It will prompt you for a directory; choose the directory pertaining to the dataset you built, whose image captions you wish to edit.
 5. The program will load all PNG images and their existing TXT captions into memory. For each PNG image without a corresponding TXT caption, you will be prompted on whether or not you would like for those PNG images to be loaded into memory. Selecting "Yes" for these prompts will create the appropriate TXT files in the proper directory (or subdirectories) and load them into memory. The Trigger Word will be applied to these new TXT files.
 6. [Use the program](https://github.com/bntrtm/lora-tag-manager/wiki/Tag-Management) for your purposes to perfect image captioning for your LoRA dataset!
-
-## Contributor Expectations
-
-Feel free to contribute to the project! When doing so, be sure to follow the [Python style guide](https://peps.python.org/pep-0008/).
-
-Try to include unit tests for your feature contributions where possible under `tests/`.
-
-Merge commits will not be accepted; when using `git pull`, please rebase your local changes onto the remote branch you are pulling, rather than making a merge commit. An efficient way to automate this process is to set up a local git configuration with the following command:
-
-```
-git config pull.rebase true
-```
