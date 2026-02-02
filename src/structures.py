@@ -1,5 +1,3 @@
-from tkinter import Entry, END
-
 class Queue:
     def __init__(self):
         self.items = []
@@ -10,7 +8,7 @@ class Queue:
     def pop(self):
         if len(self.items) == 0:
             return None
-        item = self.items[len(self.items)-1]
+        item = self.items[len(self.items) - 1]
         del self.items[-1]
         return item
 
@@ -27,10 +25,10 @@ class Trie:
     def __init__(self):
         self.root = {}
         self.end_symbol = "*"
-    
+
     def longest_common_prefix(self):
         current = self.root
-        prefix = ''
+        prefix = ""
         while True:
             keys = list(current.keys())
             if self.end_symbol in keys:
@@ -51,7 +49,7 @@ class Trie:
                     break
                 current = current[document[j]]
                 if self.end_symbol in current:
-                    matches.add(document[i:j+1])
+                    matches.add(document[i : j + 1])
         return matches
 
     def search_level(self, current_level, current_prefix, words):
@@ -61,7 +59,7 @@ class Trie:
             if key != self.end_symbol:
                 self.search_level(current_level[key], (current_prefix + key), words)
         return words
-    
+
     def words_with_prefix(self, prefix):
         matching = []
         current = self.root
@@ -82,12 +80,12 @@ class Trie:
         if self.end_symbol in current:
             return True
         return False
-    
+
     def get(self, word):
-        '''Returns a numeric value assigned to 'self.endsymbol'.
+        """Returns a numeric value assigned to 'self.endsymbol'.
 
         A return value of 0 does NOT necessarily mean the word does not exist!
-        '''
+        """
         current = self.root
         for char in word:
             if char in current:
@@ -98,7 +96,7 @@ class Trie:
             if isinstance(current[self.end_symbol], int):
                 return current[self.end_symbol]
         return 0
-    
+
     def add(self, word):
         current = self.root
         for char in word:
@@ -135,3 +133,4 @@ class Trie:
                 else:
                     break
         return
+
