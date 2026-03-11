@@ -32,7 +32,7 @@ Tagman requires Python 3.13+ and the python Pillow (PIL) library.
 
 With Python installed, you can install Pillow using `uv` with `uv add pillow`.
 
-## User Instructions
+## Quick Start
 
 1. Clone the project to your desired directory:
 ```
@@ -45,4 +45,6 @@ git clone https://github.com/bntrtm/tagman.git
     - Ensure that the first word of all TXT files (or of just the one existing TXT file) is equivalent to the "trigger word" you want to define your dataset.
 4. Select the `Load` button in the top-left corner of the GUI window. It will prompt you for a directory; choose the directory pertaining to the dataset you built, whose image captions you wish to edit.
 5. The program will load all PNG images and their existing TXT captions into memory. For each PNG image without a corresponding TXT caption, you will be prompted on whether or not you would like for those PNG images to be loaded into memory. Selecting "Yes" for these prompts will create the appropriate TXT files in the proper directory (or subdirectories) and load them into memory. The Trigger Word will be applied to these new TXT files.
-6. [Use the program](https://github.com/bntrtm/tagman/wiki/Tag-Management) for your purposes to perfect image captioning for your dataset!
+
+## Usage
+This repository's [internal wiki](https://github.com/bntrtm/tagman/wiki/Tag-Management) covers how you can use the program for your purposes to perfect image captioning for your dataset!
