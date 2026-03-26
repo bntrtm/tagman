@@ -31,23 +31,23 @@ class Window:
     def __init__(self, gui_width, gui_height, title="Tagman", is_child=False):
         self.__is_running = False
         if is_child:
-            self.__root = Toplevel()
+            self._root = Toplevel()
         else:
-            self.__root = Tk()
-        self.__root.title(title)
-        self.__root.protocol(name="WM_DELETE_WINDOW", func=self.close)
-        self.__root.bind("<Configure>", self.on_resize)
+            self._root = Tk()
+        self._root.title(title)
+        self._root.protocol(name="WM_DELETE_WINDOW", func=self.close)
+        self._root.bind("<Configure>", self.on_resize)
         self.active_queue_win = None
 
         # set up master pane
-        self.__p_master = Frame(self.__root, height=gui_height, width=gui_width)
-        self.__p_master.pack(fill=BOTH, expand=True, padx=5, pady=5)
+        self._p_master = Frame(self._root, height=gui_height, width=gui_width)
+        self._p_master.pack(fill=BOTH, expand=True, padx=5, pady=5)
         # SET STRICT SIZE:
-        self.__p_master.pack_propagate(0)
+        self._p_master.pack_propagate(False)
 
     def redraw(self):
-        self.__root.update_idletasks()
-        self.__root.update()
+        self._root.update_idletasks()
+        self._root.update()
 
     def wait_for_close(self):
         self.__is_running = True
@@ -64,12 +64,13 @@ class Window:
         self.active_queue_win.wait_for_close()
 
     def end_queue(self):
-        self.active_queue_win.close()
+        if self.active_queue_win is not None:
+            self.active_queue_win.close()
         self.active_queue_win = None
 
     def close(self):
-        self.__is_running = False
-        self.__root.destroy()
+        self._is_running = False
+        self._root.destroy()
 
     def on_resize(self, event):
         pass
@@ -82,18 +83,16 @@ class AddTxtQueueWin(Window):
         )
         self.caller_win = caller_win
         # self._Window__root.attributes('-topmost', True)
-        self._Window__root.protocol(
-            name="WM_DELETE_WINDOW", func=self.respond_close_failure
-        )
+        self._root.protocol(name="WM_DELETE_WINDOW", func=self.respond_close_failure)
         self.queue = queue
         self.func_on_yes = func_on_yes
         self.current = None
         # set up pane to display information and prompt user for action
-        self.__p_info = Frame(self._Window__p_master, height=3, width=gui_width)
+        self.__p_info = Frame(self._p_master, height=3, width=gui_width)
         self.__p_info.pack(side=TOP, fill=X, expand=True, padx=5, pady=5)
         self.__l_info = Label(self.__p_info, text="Click YES.")
         self.__l_info.pack(side=LEFT)
-        self.__p_options = Frame(self._Window__p_master, height=1, width=gui_width)
+        self.__p_options = Frame(self._p_master, height=1, width=gui_width)
         self.__p_options.pack()
         self.checkbox_var = IntVar()
         self.checkbox_var.set(0)
@@ -115,9 +114,13 @@ class AddTxtQueueWin(Window):
         print(f"Choose 'Yes' or 'No' for the current queue item: {self.current}")
 
     def confirm_yes(self):
+        if self.current is None:
+            print("Error: no file selected to confirm.")
+            return
         with open(f"{self.current.replace('.png', '.txt')}", "x"):
             pass
-        self.func_on_yes(self.current)
+        if self.func_on_yes is not None:
+            self.func_on_yes(self.current)
         self.progress()
 
     def confirm_no(self):
@@ -128,7 +131,8 @@ class AddTxtQueueWin(Window):
             self.progress()
 
     def progress(self):
-        self.current = self.queue.pop()
+        if self.queue is not None:
+            self.current = self.queue.pop()
         if self.current is None:
             self.queue = None
             self.caller_win.end_queue()
@@ -155,10 +159,41 @@ def require_Dataset(func):
 
 class TagManagerWin(Window):
     def __init__(self, gui_width, gui_height, title="Tagman"):
-        super().__init__(gui_width, gui_height, title="Tagman")
+        super().__init__(gui_width, gui_height, title=title)
         self.tag_btlist = []
         self.dataset = None
         self.current_display_image = None
+        self.__p_info = None
+        self._Window__p_master = None
+        self.__bt_load_dir = None
+        self.__l_info = None
+        self.__l_index_counter = None
+        self.__p_hrzbox = None
+        self.__p_editor = None
+        self.__l_editor = None
+        self.__nbk_tagmodes = None
+        self.__nbk_tagmodes_tab1 = None
+        self.__nbk_tagmodes_tab2 = None
+        self.__nbk_tagmodes_tab3 = None
+        self.__bt_savedataset = None
+        self.__caption_txt_field = None
+        self.__p_tag_radio_bts = None
+        self.tag_click_mode = None
+
+        self.__p_tagger = None
+        self.__p_tag_container = None
+        self.tag_entry_text = None
+        self.__txt_tag_entry = None
+        self.__p_radio_bts = None
+        self.application_mode = None
+        self.__autofill_box = None
+        self.__p_viewer = None
+        self.__l_viewer = None
+        self.__p_display = None
+        self.__bt_decrdisplay = None
+        self.__bt_incrdisplay = None
+        self.__bt_savecurrent = None
+        self.__l_image = None
 
         def build_info_pane():
             self.__p_info = Frame(
@@ -301,7 +336,7 @@ class TagManagerWin(Window):
             self.__p_viewer.pack(
                 anchor="e", side=LEFT, fill=BOTH, expand=True, padx=5, pady=5
             )
-            self.__p_viewer.pack_propagate(0)
+            self.__p_viewer.pack_propagate(False)
             self.__l_viewer = Label(self.__p_viewer, text="Current: ")
             self.__l_viewer.pack()
             self.__p_display = Frame(self.__p_viewer)
@@ -328,7 +363,7 @@ class TagManagerWin(Window):
 
     @require_Dataset
     def save_dataset(self):
-        self.dataset.save_dataset()
+        self.dataset.save_dataset()  # type: ignore
 
     def on_resize(self, event):
         if not self.display_image:
@@ -336,23 +371,23 @@ class TagManagerWin(Window):
 
     @require_Dataset
     def get_png_path(self):
-        return self.dataset.image_set[self.get_display_index()]
+        return self.dataset.image_set[self.get_display_index()]  # type: ignore
 
     @require_Dataset
     def get_txt_caption(self):
-        return self.dataset.cache[self.get_png_path()][1]
+        return self.dataset.cache[self.get_png_path()][1]  # type: ignore
 
     @require_Dataset
     def get_display_index(self):
-        return self.dataset.display_index
+        return self.dataset.display_index  # type: ignore
 
     @require_Dataset
     def set_display_index(self, val):
-        self.dataset.display_index = val
+        self.dataset.display_index = val  # type: ignore
 
     @require_Dataset
     def tag_in_caption(self, tag):
-        return self.dataset.tag_in_caption(tag)
+        return self.dataset.tag_in_caption(tag)  # type: ignore
 
     def refresh(self):
         self.display_training_element()
@@ -367,7 +402,10 @@ class TagManagerWin(Window):
         self.incr_display()
 
     def incr_display(self):
-        if self.get_display_index() == len(self.dataset.image_set) - 1:
+        if (
+            self.dataset is not None
+            and self.get_display_index() == len(self.dataset.image_set) - 1
+        ):
             self.set_display_index(0)
         else:
             self.set_display_index(self.get_display_index() + 1)
@@ -378,7 +416,7 @@ class TagManagerWin(Window):
         self.decr_display()
 
     def decr_display(self):
-        if self.get_display_index() == 0:
+        if self.dataset is not None and self.get_display_index() == 0:
             self.set_display_index(len(self.dataset.image_set) - 1)
         else:
             self.set_display_index(self.get_display_index() - 1)
@@ -391,14 +429,16 @@ class TagManagerWin(Window):
         if len(self.dataset.image_set) == 0:
             return text
         text = f"{self.get_display_index() + 1}/{len(self.dataset.image_set)}"
-        self.__l_index_counter.config(text=text)
+        if self.__l_index_counter is not None:
+            self.__l_index_counter.config(text=text)
         return text
 
     def set_caption_display_text(self, text):
-        self.__caption_txt_field.config(state="normal")
-        self.__caption_txt_field.delete("1.0", "end")
-        self.__caption_txt_field.insert(END, text)
-        self.__caption_txt_field.config(state="disabled")
+        if self.__caption_txt_field is not None:
+            self.__caption_txt_field.config(state="normal")
+            self.__caption_txt_field.delete("1.0", "end")
+            self.__caption_txt_field.insert(END, text)
+            self.__caption_txt_field.config(state="disabled")
 
     def load_caption(self, png_path):
         """Loads contents of the editor window and all caption tags as interactive buttons
@@ -414,9 +454,10 @@ class TagManagerWin(Window):
         if png_path and png_path.endswith(".png"):
             self.load_image(png_path)
             self.display_image()
-            self.__l_viewer.config(
-                text=f"Current: {str_tail_after(self.directory, '/')}...{str_tail_after(png_path, '/')}"
-            )
+            if self.__l_viewer is not None:
+                self.__l_viewer.config(
+                    text=f"Current: {str_tail_after(self.directory, '/')}...{str_tail_after(png_path, '/')}"
+                )
         else:
             raise Exception("only images with .png extensions may be opened")
 
@@ -432,26 +473,30 @@ class TagManagerWin(Window):
             label.update_idletasks()
             label.update()
             img = self.current_display_image
-            target_height = label.winfo_height()
-            # get original aspect ratio as width/height
-            original_aspect = img.size[0] / img.size[1]
-            target_width = int(target_height * original_aspect)
-            resized = img.resize((target_width, target_height))
-            return resized
+            if img is not None:
+                target_height = label.winfo_height()
+                # get original aspect ratio as width/height
+                original_aspect = img.size[0] / img.size[1]
+                target_width = int(target_height * original_aspect)
+                resized = img.resize((target_width, target_height))
+                return resized
 
-        resized_image = img_fit_to_height(self.__l_image)
-        photo = ImageTk.PhotoImage(resized_image)  # convert for tkinter compatibility
-        self.__l_image.config(image=photo)
-        self.__l_image.image = photo
+        if self.__l_image is not None:
+            resized_image = img_fit_to_height(self.__l_image)
+            photo = ImageTk.PhotoImage(
+                resized_image
+            )  # convert for tkinter compatibility
+            self.__l_image.config(image=photo)
+            self.__l_image.image = photo
 
     def load_directory(self):
         self.directory = filedialog.askdirectory()
         if not os.path.isdir(self.directory):
             print("Directory load operation was canceled.")
             return
-        if self.dataset:
-            self.dataset = None
-        self.__l_info.config(text=f"Working under directory: {self.directory}")
+        self.dataset = None
+        if self.__l_info is not None:
+            self.__l_info.config(text=f"Working under directory: {self.directory}")
         self.dataset = Dataset(self.directory, self)
         if len(self.dataset.cache) == 0:
             self.dataset = None
@@ -501,14 +546,16 @@ class TagManagerWin(Window):
                 row_n += 1
 
     def on_tag_entry(self, event, win):
+        if self.__txt_tag_entry is None:
+            return
         negate = False
         entry = self.__txt_tag_entry
         text = entry.get().rstrip(", ").replace(",", "").lower()
         if text.startswith("-"):
             negate = True
             text = text.lstrip("-")
-        if self.__autofill_box.selected:
-            text = self.__autofill_box.selected.cget("text")
+        if (box := self.__autofill_box) is not None and box.selected:
+            text = box.selected.cget("text")
         entry.delete(0, "end")
 
         @require_Dataset
@@ -550,26 +597,32 @@ class TagManagerWin(Window):
         return "break"
 
     def on_tag_auto(self, event):
-        option_1_text = self.__autofill_box.labels[0].cget("text")
-        if option_1_text:
-            if self.tag_entry_text.get().startswith("-"):
-                self.tag_entry_text.set(f"-{option_1_text}")
-            else:
-                self.tag_entry_text.set(option_1_text)
-            self.__txt_tag_entry.icursor(END)
+        if (box := self.__autofill_box) and (
+            option_1_text := box.labels[0].cget("text")
+        ):
+            if t := self.tag_entry_text:
+                if t.get().startswith("-"):
+                    self.tag_entry_text.set(f"-{option_1_text}")
+                else:
+                    self.tag_entry_text.set(option_1_text)
+            if self.__txt_tag_entry:
+                self.__txt_tag_entry.icursor(END)
         return "break"
 
     @require_Dataset
     def trace_tag_entry(self, var, index, mode):
+        if not self.tag_entry_text:
+            return
         text = self.tag_entry_text.get().lower()
         if not text:
-            self.__autofill_box.update([])
+            if box := self.__autofill_box:
+                box.update([])
             return
-        words_with_pre = self.dataset.tag_trie.words_with_prefix(text.lstrip("-"))
+        words_with_pre = self.dataset.tag_trie.words_with_prefix(text.lstrip("-"))  # type: ignore
         options = []
         if len(words_with_pre) > 0:
             for suggestion in words_with_pre:
-                if self.dataset.trigger_word == suggestion:
+                if self.dataset.trigger_word == suggestion:  # type: ignore
                     continue
                 if text.startswith("-"):
                     if not self.tag_in_caption(suggestion):
@@ -580,13 +633,15 @@ class TagManagerWin(Window):
                 options.append(suggestion)
                 if len(options) == 3:
                     break
-        self.__autofill_box.update(options[:3])
+        if box := self.__autofill_box:
+            box.update(options[:3])
 
     def nav_autofill(self, event):
-        if event.keysym == "Up":
-            self.__autofill_box.navigate(1)
-        elif event.keysym == "Down":
-            self.__autofill_box.navigate(-1)
+        if box := self.__autofill_box:
+            if event.keysym == "Up":
+                box.navigate(1)
+            elif event.keysym == "Down":
+                box.navigate(-1)
 
     def on_focus_in_entry_widget(self, event, widget, placeholder_text):
         if isinstance(widget, Entry):

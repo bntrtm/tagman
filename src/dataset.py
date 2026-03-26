@@ -1,4 +1,3 @@
-from tkinter import Tk
 from structures import Trie, Queue
 from log_format import str_tail_after
 import os
@@ -38,7 +37,7 @@ class Dataset:
         if not os.path.isfile(txt_path):
             raise Exception("Supposed *.txt path is not a valid file")
         print(
-            f"Saving caption for {str_tail_after(png_path, '/')} at {str_tail_after(txt_path, f'{str_tail_after(self.directory, '/')}/')}"
+            f"Saving caption for {str_tail_after(png_path, '/')} at {str_tail_after(txt_path, f'{str_tail_after(self.directory, "/")}/')}"
         )
         with open(txt_path, "w") as file:
             file.write(self.cache[png_path][1])
@@ -142,7 +141,7 @@ class Dataset:
         if os.path.isfile(txt_path):
             self.cache[png_path] = (txt_path, None)
             print(
-                f"Adding training pair: {str_tail_after(png_path, f'{str_tail_after(self.directory, '/')}/')} -> {str_tail_after(txt_path, f'{str_tail_after(self.directory, '/')}/')}"
+                f"Adding training pair: {str_tail_after(png_path, f'{str_tail_after(self.directory, "/")}/')} -> {str_tail_after(txt_path, f'{str_tail_after(self.directory, "/")}/')}"
             )
         else:
             raise Exception(
@@ -177,7 +176,7 @@ class Dataset:
                         f"NOTICE: Trigger word '{self.trigger_word}' not found in file '{txt_path}.' Inserting for cache."
                     )
                     # ensure the trigger word does not exist anywhere ELSE within the caption
-                    file_content = file_content.replace(f"{self.trigger_word}", f"")
+                    file_content = file_content.replace(f"{self.trigger_word}", "")
                     # add the trigger word to the beginning of the caption
                     file_content = f"{self.trigger_word}, " + file_content.strip()
                 # add caption to dataset

@@ -2,7 +2,7 @@
 
 ## Contributor Expectations
 
-Feel free to contribute to the project! When doing so, be sure to follow the [Python style guide](https://peps.python.org/pep-0008/).
+Feel free to contribute to the project! When doing so, be sure to follow the [Python style guide](https://peps.python.org/pep-0008/). Use Astral's `ruff` for linting and formatting, and `ty` for type checking.
 
 Try to include unit tests for your feature contributions where possible under `tests/`.
 

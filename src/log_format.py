@@ -8,4 +8,3 @@ def str_tail_after(string, substring, include=True):
         return result
     else:
         return string
-
