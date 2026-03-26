@@ -1,16 +1,20 @@
 # Tagman
 
-## Easy management for dataset image captioning
+## A Tag Manager for Captioning Image Datasets
 
-Tagman (_tag manager_) is a GUI application made with python's tkinter library, whose purpose is to provide users with an efficient and user-friendly tool for tagging datasets of PNG images with TXT files.
+Tagman (_tag manager_) is a `tkinter`-based GUI application, whose purpose is to provide users with an efficient and user-friendly tool for captioning PNG image datasets with TXT files generated from tags.
 
 ![example](https://github.com/user-attachments/assets/59686119-e470-4960-8dc0-50ef38b9ebce)
 
-Building a detailed dataset is integral to getting good results when you might want to build a search algorithm leveraging image captions, or train some form of AI model on image data. However, the process is rather tedious. Auto-image captioning programs building out an initial batch of TXT files to caption PNG images can include the same irrelevant tag in a multitude of images for the dataset, or otherwise miss some obvious ones, compromising data integrity.
+### About
 
-Amending this issue becomes an interminable task while using a traditional text editor, as one must individually scrutinize every TXT file for errors or missing details in their image captions. This issue becomes more evident as one's dataset grows (which, for best results, is ideal).
+Building a detailed dataset is integral to getting good results when you building any algorithm leveraging image captions, or training some form of AI model on image data. However, the process is rather tedious. Auto-captioning programs building out an initial batch of `TXT` files to caption `PNG` images can apply the same irrelevant tag to a multitude of images within the dataset, or otherwise miss some obvious ones, compromising data integrity.
 
-Tagman aims to equip users with the ability to easily visualize existing tags in image captions built within `\*.txt`` files. To accomplish this, it offers the following features:
+Amending this issue becomes an interminable task while using a traditional text editor, as one must individually scrutinize every `TXT` file for errors or missing details in their image captions. This problem becomes more evident as one's dataset grows (which, for best results, is ideal).
+
+Tagman aims to equip users with the ability to easily visualize existing tags in image captions built within `\*.txt`` files, or even start building from the ground up!
+
+### Features
 
 - Loads an image dataset through a directory recursively
   - Prompts users on missing `*.txt` captions for existing `*.png` images
