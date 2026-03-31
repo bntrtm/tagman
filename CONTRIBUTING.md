@@ -1,4 +1,4 @@
-# Lora Tag Manager
+# Tagman
 
 ## Contributor Expectations
 
