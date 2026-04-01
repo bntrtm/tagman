@@ -1,4 +1,4 @@
-from graphics import TagManagerWin
+from gui import TagManagerWin
 
 
 def main():
