@@ -14,4 +14,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        raise e
+        # print(f"Unexpected error: {e}")

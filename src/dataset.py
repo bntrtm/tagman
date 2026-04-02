@@ -6,14 +6,14 @@ import os
 class Dataset:
     """Stores all data relevant to the current training session"""
 
-    def __init__(self, directory, win):
+    def __init__(self, directory, win, make_empty=False):
         self.directory = directory
         self.win = win
         self.cache = {}
         self.tag_trie = Trie()
         self.trigger_word = None
         self.add_txt_queue = None
-        if os.path.isdir(self.directory):
+        if os.path.isdir(self.directory) and not make_empty:
             self.expand_dataset_recursive(self.directory)
         # prompt user for action on .png files unaccompanied by .txt files
         if self.add_txt_queue is not None and self.win.active_queue_win is None:
@@ -22,9 +22,17 @@ class Dataset:
             )
         while self.win.active_queue_win is not None:
             pass
-        self.generate_tag_trie()
+        if self.cache:
+            self.generate_tag_trie()
         self.image_set = list(self.cache.keys())
-        self.display_index = 0
+
+    def __len__(self) -> int:
+        return len(self.image_set) if self.image_set is not None else 0
+
+    def get_png_path(self, index: int) -> str:
+        if 0 <= index < len(self.image_set):
+            return self.image_set[index]
+        return ""
 
     def save_dataset(self):
         if len(self.cache) == 0:
@@ -50,19 +58,20 @@ class Dataset:
         if not tag.isspace():
             self.tag_trie.remove(tag)
 
-    def tag_in_caption(self, tag, index=None, png_path=None):
+    def tag_in_caption(self, tag, index: int = -1, png_path: str = "") -> bool:
         """Returns whether or not the given tag is found within a specified caption.
 
         This function prioritizes its search in the following way:
             1) Is the tag in the caption of a specified png_path?
             2) Is the tag in the caption of a *.png path found within the dataset at a specified index?
-            3) Is the tag in the caption of the current display index?
+
+        If no caption is specified by index nor by png_path, the function simply returns False.
         """
-        if index is None:
-            index = self.display_index
-        if png_path is not None:
+        if not index and not png_path:
+            return False
+        if png_path:
             caption = self.cache[png_path][1]
-        else:
+        elif -1 < index < len(self.cache):
             caption = self.cache[self.image_set[index]][1]
         search = "," + caption.replace(", ", ",").strip()
         return f",{tag}," in search
