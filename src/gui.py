@@ -1,29 +1,15 @@
-from graphics import Window
-from tkinter import (
-    ttk,
-    BOTH,
-    X,
-    WORD,
-    LEFT,
-    RIGHT,
-    TOP,
-    END,
-    Label,
-    Frame,
-    Button,
-    Radiobutton,
-    Text,
-    Entry,
-    filedialog,
-    StringVar,
-)
-from PIL import Image, ImageTk
+import tkinter.filedialog
+import tkinter.ttk as ttk
+from typing import Callable
+from warnings import deprecated
+from graphics import Window, DisplayManager
+import tkinter as tk
 from tags import TagBox
 from dataset import Dataset
-from log_format import str_tail_after
 import os
 
 
+@deprecated("Dataset may be empty; should never be None")
 def require_Dataset(func):
     def wrapper(*args, **kwargs):
         if args[0].dataset is None:
@@ -36,14 +22,49 @@ def require_Dataset(func):
     return wrapper
 
 
+class PNGDisplayManager(DisplayManager):
+    def __init__(
+        self,
+        master: tk.Misc | None,
+        height: int,
+        cmd_on_update: Callable,
+        dataset: Dataset,
+    ):
+        super().__init__(master, height, cmd_on_update)
+        self.dataset: Dataset = dataset
+
+    def reset(self, dataset: Dataset | None = None):
+        if dataset:
+            self.dataset = dataset
+        super().reset()
+
+    def on_update(self):
+        self.display_from_path(self.get_display_path(), self.dataset.directory)
+        super().on_update()
+
+    def max_index(self) -> int:
+        return len(self.dataset) - 1
+
+    def get_display_path(self) -> str:
+        if not self.dataset:
+            return ""
+        return self.dataset.get_png_path(self.display_index)
+
+    def display_from_path(self, png_path, dir=""):
+        if not self.dataset:
+            return
+        super().display_from_path(png_path, dir)
+
+
 class TagManagerWin(Window):
     def __init__(self, gui_width, gui_height, title="Tagman"):
         super().__init__(gui_width, gui_height, title=title)
+
+        self.dataset = Dataset("", self, make_empty=True)
+
         self.tag_btlist = []
-        self.dataset = None
-        self.current_display_image = None
+
         self.__p_info = None
-        self._Window__p_master = None
         self.__bt_load_dir = None
         self.__l_info = None
         self.__l_index_counter = None
@@ -57,7 +78,7 @@ class TagManagerWin(Window):
         self.__bt_savedataset = None
         self.__caption_txt_field = None
         self.__p_tag_radio_bts = None
-        self.tag_click_mode = None
+        self.tag_click_mode: tk.StringVar = tk.StringVar()
 
         self.__p_tagger = None
         self.__p_tag_container = None
@@ -66,55 +87,48 @@ class TagManagerWin(Window):
         self.__p_radio_bts = None
         self.application_mode = None
         self.__autofill_box = None
-        self.__p_viewer = None
         self.__l_viewer = None
-        self.__p_display = None
-        self.__bt_decrdisplay = None
-        self.__bt_incrdisplay = None
-        self.__bt_savecurrent = None
-        self.__l_image = None
 
         def build_info_pane():
-            self.__p_info = Frame(
-                self._Window__p_master,
+            self.__p_info = tk.Frame(
+                self._p_master,
                 height=1,
                 width=gui_width,
                 highlightbackground="gray",
                 highlightthickness=2,
             )
-            self.__p_info.pack(side=TOP, fill=X, expand=True, padx=5, pady=5)
-            self.directory = ""
-            self.__bt_load_dir = Button(
+            self.__p_info.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
+            self.__bt_load_dir = tk.Button(
                 self.__p_info, text="Load", command=self.load_directory
             )
-            self.__bt_load_dir.pack(side=LEFT)
-            self.__l_info = Label(
-                self.__p_info, text=f"Working under directory: {self.directory}"
+            self.__bt_load_dir.pack(side=tk.LEFT)
+            self.__l_info = tk.Label(
+                self.__p_info, text=f"Working under directory: {self.dataset.directory}"
             )
-            self.__l_info.pack(side=LEFT)
-            self.__l_index_counter = Label(self.__p_info, text="N/A")
-            self.__l_index_counter.pack(side=RIGHT, padx=5)
+            self.__l_info.pack(side=tk.LEFT)
+            self.__l_index_counter = tk.Label(self.__p_info, text="N/A")
+            self.__l_index_counter.pack(side=tk.RIGHT, padx=5)
 
         def build_dataset_pane():
-            self.__p_hrzbox = Frame(self._Window__p_master)
-            self.__p_hrzbox.pack(side=TOP, fill=BOTH, expand=True)
+            self.__p_hrzbox = tk.Frame(self._p_master)
+            self.__p_hrzbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         def build_editor_pane():
-            self.__p_editor = Frame(
+            self.__p_editor = tk.Frame(
                 self.__p_hrzbox,
                 height=gui_height,
                 highlightbackground="gray",
                 highlightthickness=2,
             )
             self.__p_editor.pack(
-                anchor="w", side=LEFT, fill=BOTH, expand=True, padx=5, pady=5
+                anchor="w", side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5
             )
-            self.__l_editor = Label(self.__p_editor, text="Tag Text Editor")
+            self.__l_editor = tk.Label(self.__p_editor, text="Tag Text Editor")
             self.__l_editor.pack()
 
             # build editor in tab layout
             self.__nbk_tagmodes = ttk.Notebook(self.__p_editor, height=18)
-            self.__nbk_tagmodes.pack(fill=BOTH, expand=True)
+            self.__nbk_tagmodes.pack(fill=tk.BOTH, expand=True)
             self.__nbk_tagmodes_tab1 = ttk.Frame(self.__nbk_tagmodes)
             self.__nbk_tagmodes_tab1.pack(padx=5, pady=5)
             self.__nbk_tagmodes_tab2 = ttk.Frame(self.__nbk_tagmodes)
@@ -124,39 +138,39 @@ class TagManagerWin(Window):
             self.__nbk_tagmodes.add(self.__nbk_tagmodes_tab1, text="Tag Editor")
             self.__nbk_tagmodes.add(self.__nbk_tagmodes_tab2, text="Caption")
             self.__nbk_tagmodes.add(self.__nbk_tagmodes_tab3, text="Options")
-            self.__bt_savedataset = Button(
+            self.__bt_savedataset = tk.Button(
                 self.__nbk_tagmodes_tab3, text="Save Dataset", command=self.save_dataset
             )
             self.__bt_savedataset.pack(padx=5, pady=5)
-            self.__caption_txt_field = Text(
-                self.__nbk_tagmodes_tab2, wrap=WORD, state="disabled"
+            self.__caption_txt_field = tk.Text(
+                self.__nbk_tagmodes_tab2, wrap=tk.WORD, state="disabled"
             )
             self.__caption_txt_field.pack(padx=5, pady=5)
 
             # allow users to set preferred tag button action
-            self.__p_tag_radio_bts = Frame(self.__nbk_tagmodes_tab1, width=25)
+            self.__p_tag_radio_bts = tk.Frame(self.__nbk_tagmodes_tab1, width=25)
             self.__p_tag_radio_bts.pack(anchor="nw", padx=5, pady=5)
-            self.tag_click_mode = StringVar(self.__p_tag_radio_bts, "Delete")
+            self.tag_click_mode = tk.StringVar(self.__p_tag_radio_bts, "Delete")
             tag_click_radio_vals = {
                 "Delete Selected": "Delete",
                 "Apply Selected to All": "Apply_All",
                 "Delete Selected from All": "Delete_All",
             }
             for text, value in tag_click_radio_vals.items():
-                Radiobutton(
+                tk.Radiobutton(
                     self.__p_tag_radio_bts,
                     text=text,
                     variable=self.tag_click_mode,
                     value=value,
-                ).pack(side=LEFT, fill=X, ipady=5)
-            self.__p_tag_container = Frame(self.__nbk_tagmodes_tab1)
+                ).pack(side=tk.LEFT, fill=tk.X, ipady=5)
+            self.__p_tag_container = tk.Frame(self.__nbk_tagmodes_tab1)
             self.__p_tag_container.pack(anchor="sw", padx=5, pady=5)
 
             # pane for singular tag entry
-            self.__p_tagger = Frame(self.__p_editor)
-            self.__p_tagger.pack(side=LEFT)
-            self.tag_entry_text = StringVar()
-            self.__txt_tag_entry = Entry(
+            self.__p_tagger = tk.Frame(self.__p_editor)
+            self.__p_tagger.pack(side=tk.LEFT)
+            self.tag_entry_text = tk.StringVar()
+            self.__txt_tag_entry = tk.Entry(
                 self.__p_tagger, textvariable=self.tag_entry_text
             )  # , height=1, width=50
             self.__txt_tag_entry.pack(anchor="nw")
@@ -186,128 +200,62 @@ class TagManagerWin(Window):
             )
 
             # allow users to set preferred tag entry application option
-            self.__p_radio_bts = Frame(self.__p_tagger, width=25)
+            self.__p_radio_bts = tk.Frame(self.__p_tagger, width=25)
             self.__p_radio_bts.pack(anchor="sw")
-            self.application_mode = StringVar(self.__p_radio_bts, "Apply")
+            self.application_mode = tk.StringVar(self.__p_radio_bts, "Apply")
             application_radio_vals = {
                 "Apply to Current": "Apply",
                 "Apply to All": "Apply_All",
             }
             for text, value in application_radio_vals.items():
-                new_bt = Radiobutton(
+                new_bt = tk.Radiobutton(
                     self.__p_radio_bts,
                     text=text,
                     variable=self.application_mode,
                     value=value,
                 )
-                new_bt.pack(side=LEFT, fill=X, ipady=5)
+                new_bt.pack(side=tk.LEFT, fill=tk.X, ipady=5)
 
             # expose a box for tag suggestions based on existing tag entry text
             self.__autofill_box = SuggestBox(self.__p_editor, color="red")
 
-        def build_display_pane():
-            self.__p_viewer = Frame(
-                self.__p_hrzbox,
-                height=gui_height,
-                highlightbackground="gray",
-                highlightthickness=2,
-            )
-            self.__p_viewer.pack(
-                anchor="e", side=LEFT, fill=BOTH, expand=True, padx=5, pady=5
-            )
-            self.__p_viewer.pack_propagate(False)
-            self.__l_viewer = Label(self.__p_viewer, text="Current: ")
-            self.__l_viewer.pack()
-            self.__p_display = Frame(self.__p_viewer)
-            self.__p_display.pack(fill=BOTH, expand=True)
-            self.__bt_decrdisplay = Button(
-                self.__p_display, text=" <- ", command=self.decr_display
-            )
-            self.__bt_decrdisplay.grid(column=0, row=0, sticky="w")
-            self.__bt_savecurrent = Button(
-                self.__p_display, text="Refresh", command=self.refresh
-            )
-            self.__bt_savecurrent.grid(column=1, row=0, columnspan=2)
-            self.__bt_incrdisplay = Button(
-                self.__p_display, text=" -> ", command=self.incr_display
-            )
-            self.__bt_incrdisplay.grid(column=3, row=0, sticky="e")
-            self.__l_image = Label(self.__p_viewer)
-            self.__l_image.pack(fill=BOTH, expand=True)
-
         build_info_pane()
         build_dataset_pane()
         build_editor_pane()
-        build_display_pane()
-
-    @require_Dataset
-    def save_dataset(self):
-        self.dataset.save_dataset()  # type: ignore
-
-    def on_resize(self, event):
-        if not self.display_image:
-            self.display_image()
-
-    @require_Dataset
-    def get_png_path(self):
-        return self.dataset.image_set[self.get_display_index()]  # type: ignore
-
-    @require_Dataset
-    def get_txt_caption(self):
-        return self.dataset.cache[self.get_png_path()][1]  # type: ignore
-
-    @require_Dataset
-    def get_display_index(self):
-        return self.dataset.display_index  # type: ignore
-
-    @require_Dataset
-    def set_display_index(self, val):
-        self.dataset.display_index = val  # type: ignore
-
-    @require_Dataset
-    def tag_in_caption(self, tag):
-        return self.dataset.tag_in_caption(tag)  # type: ignore
+        self.display: PNGDisplayManager = PNGDisplayManager(
+            self.__p_hrzbox, gui_height, self.refresh, self.dataset
+        )
 
     def refresh(self):
-        self.display_training_element()
+        if self.dataset:
+            self.update_index_counter_label_text()
+            self.load_caption(self.get_png_path())
 
-    def display_training_element(self):
-        self.update_index_counter_label_text()
-        self.open_image(self.get_png_path())
-        self.load_caption(self.get_png_path())
+    def save_dataset(self):
+        self.dataset.save_dataset()
 
-    def incr_display_handle(self, event):
-        """For non-Button widget events passing 'event' as an argument"""
-        self.incr_display()
+    def on_resize(self, event):
+        pass
 
-    def incr_display(self):
-        if (
-            self.dataset is not None
-            and self.get_display_index() == len(self.dataset.image_set) - 1
-        ):
-            self.set_display_index(0)
-        else:
-            self.set_display_index(self.get_display_index() + 1)
-        self.display_training_element()
+    def get_png_path(self):
+        if not self.dataset:
+            return ""
+        path = self.dataset.get_png_path(self.display.display_index)
+        return path
 
-    def decr_display_handle(self, event):
-        """For non-Button widget events passing 'event' as an argument"""
-        self.decr_display()
+    def get_txt_caption(self):
+        return self.dataset.cache[self.get_png_path()][1]
 
-    def decr_display(self):
-        if self.dataset is not None and self.get_display_index() == 0:
-            self.set_display_index(len(self.dataset.image_set) - 1)
-        else:
-            self.set_display_index(self.get_display_index() - 1)
-        self.display_training_element()
+    def tag_in_caption(self, tag):
+        return self.dataset.tag_in_caption(tag, index=self.display.display_index)
 
     def update_index_counter_label_text(self):
         text = "N/A"
-        if not self.dataset:
+        if not self.dataset or not self.display:
             return text
-        if len(self.dataset.image_set) == 0:
+        if len(self.dataset) == 0:
             return text
-        text = f"{self.get_display_index() + 1}/{len(self.dataset.image_set)}"
+        text = f"{self.display.display_index + 1}/{len(self.dataset)}"
         if self.__l_index_counter is not None:
             self.__l_index_counter.config(text=text)
         return text
@@ -316,7 +264,7 @@ class TagManagerWin(Window):
         if self.__caption_txt_field is not None:
             self.__caption_txt_field.config(state="normal")
             self.__caption_txt_field.delete("1.0", "end")
-            self.__caption_txt_field.insert(END, text)
+            self.__caption_txt_field.insert(tk.END, text)
             self.__caption_txt_field.config(state="disabled")
 
     def load_caption(self, png_path):
@@ -329,61 +277,39 @@ class TagManagerWin(Window):
         self.set_caption_display_text(self.get_txt_caption())
         self.display_tags_as_boxes(self.__p_tag_container, self.get_txt_caption())
 
-    def open_image(self, png_path):
-        if png_path and png_path.endswith(".png"):
-            self.load_image(png_path)
-            self.display_image()
-            if self.__l_viewer is not None:
-                self.__l_viewer.config(
-                    text=f"Current: {str_tail_after(self.directory, '/')}...{str_tail_after(png_path, '/')}"
-                )
-        else:
-            raise Exception("only images with .png extensions may be opened")
-
-    def load_image(self, file_path):
-        self.current_display_image = Image.open(file_path)
-
-    def display_image(self):
-        if not self.current_display_image:
-            raise Exception("No image set to display")
-
-        # FIXME: resizing does not fill entire image label; takes a few refreshes before it does.
-        def img_fit_to_height(label):
-            label.update_idletasks()
-            label.update()
-            img = self.current_display_image
-            if img is not None:
-                target_height = label.winfo_height()
-                # get original aspect ratio as width/height
-                original_aspect = img.size[0] / img.size[1]
-                target_width = int(target_height * original_aspect)
-                resized = img.resize((target_width, target_height))
-                return resized
-
-        if self.__l_image is not None:
-            resized_image = img_fit_to_height(self.__l_image)
-            photo = ImageTk.PhotoImage(
-                resized_image
-            )  # convert for tkinter compatibility
-            self.__l_image.config(image=photo)
-            self.__l_image.image = photo
-
     def load_directory(self):
-        self.directory = filedialog.askdirectory()
-        if not os.path.isdir(self.directory):
+        directory = tkinter.filedialog.askdirectory()
+        if not os.path.isdir(directory):
             print("Directory load operation was canceled.")
             return
-        self.dataset = None
-        if self.__l_info is not None:
-            self.__l_info.config(text=f"Working under directory: {self.directory}")
-        self.dataset = Dataset(self.directory, self)
-        if len(self.dataset.cache) == 0:
-            self.dataset = None
-            raise Exception(f"No images were found under directory {self.directory}")
-        self.display_training_element()
+        self.dataset = Dataset(directory, self)
+        if len(self.dataset) == 0:
+            # TODO: Log f"No valid images were found under directory {self.datasetdirectory}"
+            pass
+        if self.__l_info:
+            self.__l_info.config(
+                text=f"Working under directory: {self.dataset.directory}"
+            )
+        self.display.reset(self.dataset)
+        self.refresh()
+
+    def incr_display_handle(self, event):
+        """For non-Button widget events passing 'event' as an argument"""
+        self.display.incr_display()
+
+    def decr_display_handle(self, event):
+        """For non-Button widget events passing 'event' as an argument"""
+        self.display.decr_display()
 
     def add_new_tagbox(self, widget, tag):
-        new_bt = TagBox(self, widget, tag)
+        new_bt = TagBox(
+            self.dataset,
+            widget,
+            self.tag_click_mode,
+            self.display.display_index,
+            self.refresh,
+            tag,
+        )
         self.tag_btlist.append(new_bt)
         self.display_tagbox_grid()
 
@@ -437,7 +363,6 @@ class TagManagerWin(Window):
             text = box.selected.cget("text")
         entry.delete(0, "end")
 
-        @require_Dataset
         def try_continue(self):
             if text == self.dataset.trigger_word:
                 return
@@ -454,14 +379,14 @@ class TagManagerWin(Window):
                 case "Apply_All":
                     if negate:
                         print(
-                            f'Removing tag "{text}" from all .txt files in dataset {self.directory}'
+                            f'Removing tag "{text}" from all .txt files in dataset {self.dataset.directory}'
                         )
                         self.dataset.remove_tag_from_image_caption(
                             text, png_path=self.get_png_path(), all=True
                         )
                     else:
                         print(
-                            f'Applying tag "{text}" to all .txt files in dataset {self.directory}'
+                            f'Applying tag "{text}" to all .txt files in dataset {self.dataset.directory}'
                         )
                         self.dataset.add_tag_to_image_caption(
                             text, png_path=self.get_png_path(), all=True
@@ -485,11 +410,12 @@ class TagManagerWin(Window):
                 else:
                     self.tag_entry_text.set(option_1_text)
             if self.__txt_tag_entry:
-                self.__txt_tag_entry.icursor(END)
+                self.__txt_tag_entry.icursor(tk.END)
         return "break"
 
-    @require_Dataset
     def trace_tag_entry(self, var, index, mode):
+        if not self.dataset:
+            return
         if not self.tag_entry_text:
             return
         text = self.tag_entry_text.get().lower()
@@ -497,11 +423,11 @@ class TagManagerWin(Window):
             if box := self.__autofill_box:
                 box.update([])
             return
-        words_with_pre = self.dataset.tag_trie.words_with_prefix(text.lstrip("-"))  # type: ignore
+        words_with_pre = self.dataset.tag_trie.words_with_prefix(text.lstrip("-"))
         options = []
         if len(words_with_pre) > 0:
             for suggestion in words_with_pre:
-                if self.dataset.trigger_word == suggestion:  # type: ignore
+                if self.dataset.trigger_word == suggestion:
                     continue
                 if text.startswith("-"):
                     if not self.tag_in_caption(suggestion):
@@ -523,9 +449,9 @@ class TagManagerWin(Window):
                 box.navigate(-1)
 
     def on_focus_in_entry_widget(self, event, widget, placeholder_text):
-        if isinstance(widget, Entry):
+        if isinstance(widget, tk.Entry):
             text = widget.get()
-        elif isinstance(widget, Text):
+        elif isinstance(widget, tk.Text):
             text = widget.get("1.0", "end-1c")  # USED FOR TEXT WIDGETS ONLY
         else:
             return
@@ -534,31 +460,31 @@ class TagManagerWin(Window):
             widget.config(fg="black")
 
     def on_focus_out_entry_widget(self, event, widget, placeholder_text):
-        if isinstance(widget, Entry):
+        if isinstance(widget, tk.Entry):
             text = widget.get()
-        elif isinstance(widget, Text):
+        elif isinstance(widget, tk.Text):
             text = widget.get("1.0", "end-1c")  # USED FOR TEXT WIDGETS ONLY
         if len(text) == 0:
             widget.config(fg="gray")
-            widget.insert(END, placeholder_text)
+            widget.insert(tk.END, placeholder_text)
 
 
 class SuggestBox:
     def __init__(self, parent, color="black"):
-        self.__p_listbox = Frame(
+        self.__p_listbox = tk.Frame(
             parent, height=3, width=50, highlightbackground="gray", highlightthickness=2
         )
-        self.__p_listbox.pack(anchor="n", fill=X, expand=False, padx=5, pady=5)
-        self.__l_opt1 = Label(
+        self.__p_listbox.pack(anchor="n", fill=tk.X, expand=False, padx=5, pady=5)
+        self.__l_opt1 = tk.Label(
             self.__p_listbox, text="Option 1", fg=color, font=("Helvetica", 10, "bold")
         )
         self.__l_opt1.grid(column=0, row=0, sticky="w")
-        self.__l_opt2 = Label(
+        self.__l_opt2 = tk.Label(
             self.__p_listbox, text="Option 2", fg=color, font=("Helvetica", 10, "bold")
         )
         self.lighten_foreground_color(self.__l_opt2, color, 0.165)
         self.__l_opt2.grid(column=0, row=1, sticky="w")
-        self.__l_opt3 = Label(
+        self.__l_opt3 = tk.Label(
             self.__p_listbox, text="Option 3", fg=color, font=("Helvetica", 10, "bold")
         )
         self.lighten_foreground_color(self.__l_opt3, color, 0.33)
