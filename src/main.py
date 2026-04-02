@@ -1,8 +1,10 @@
+from state import State
 from gui import TagManagerWin
 
 
 def main():
-    win = TagManagerWin(900, 600)
+    state = State(None)
+    win = TagManagerWin(state, 900, 600)
     win.redraw()
 
     win.wait_for_close()

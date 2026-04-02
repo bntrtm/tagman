@@ -1,3 +1,4 @@
+from graphics import Window
 from structures import Trie, Queue
 from log_format import str_tail_after
 import os
@@ -6,13 +7,17 @@ import os
 class Dataset:
     """Stores all data relevant to the current training session"""
 
-    def __init__(self, directory, win, make_empty=False):
+    def __init__(self, directory, win: Window | None, make_empty=False):
         self.directory = directory
         self.win = win
         self.cache = {}
+        self.image_set = []
         self.tag_trie = Trie()
         self.trigger_word = None
         self.add_txt_queue = None
+
+        if make_empty or win is None:
+            return
         if os.path.isdir(self.directory) and not make_empty:
             self.expand_dataset_recursive(self.directory)
         # prompt user for action on .png files unaccompanied by .txt files
@@ -20,8 +25,9 @@ class Dataset:
             self.win.start_queue(
                 self.add_txt_queue, func_on_yes=self.add_dataset_element
             )
-        while self.win.active_queue_win is not None:
+        while self.win.active_queue_win is not None:  # type: ignore
             pass
+
         if self.cache:
             self.generate_tag_trie()
         self.image_set = list(self.cache.keys())
@@ -59,6 +65,8 @@ class Dataset:
             self.tag_trie.remove(tag)
 
     def tag_in_caption(self, tag, index: int = -1, png_path: str = "") -> bool:
+        if not self:
+            return False
         """Returns whether or not the given tag is found within a specified caption.
 
         This function prioritizes its search in the following way:
@@ -67,7 +75,7 @@ class Dataset:
 
         If no caption is specified by index nor by png_path, the function simply returns False.
         """
-        if not index and not png_path:
+        if index < 0 and not png_path:
             return False
         if png_path:
             caption = self.cache[png_path][1]

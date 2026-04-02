@@ -1,4 +1,6 @@
-from helpers import get_widget_space
+from helpers import (
+    get_widget_space,
+)
 from PIL import ImageFile, ImageTk, Image
 from log_format import str_tail_after
 from typing import Callable
@@ -17,11 +19,12 @@ class Window:
         self._root.bind("<Configure>", self.on_resize)
         self.active_queue_win = None
 
-        # set up master pane
-        self._p_master = tk.Frame(self._root, height=gui_height, width=gui_width)
-        self._p_master.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # set up master frame
+        self._f_master = tk.Frame(self._root, height=gui_height, width=gui_width)
+        self._f_master.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         # SET STRICT SIZE:
-        self._p_master.pack_propagate(False)
+        self._f_master.pack_propagate(False)
+        self._f_master.config(bg="red")
 
     def redraw(self):
         self._root.update_idletasks()
@@ -65,11 +68,11 @@ class AddTxtQueueWin(Window):
         self.func_on_yes = func_on_yes
         self.current = None
         # set up pane to display information and prompt user for action
-        self.__p_info = tk.Frame(self._p_master, height=3, width=gui_width)
+        self.__p_info = tk.Frame(self._f_master, height=3, width=gui_width)
         self.__p_info.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
         self.__l_info = tk.Label(self.__p_info, text="Click YES.")
         self.__l_info.pack(side=tk.LEFT)
-        self.__p_options = tk.Frame(self._p_master, height=1, width=gui_width)
+        self.__p_options = tk.Frame(self._f_master, height=1, width=gui_width)
         self.__p_options.pack()
         self.checkbox_var = tk.IntVar()
         self.checkbox_var.set(0)
@@ -127,8 +130,9 @@ class AddTxtQueueWin(Window):
 class DisplayManager(tk.Frame):
     """
     DisplayManager is a frame consisting of navigation buttons, a refresh button,
-    and a pane for image display. An internal index is used to track the index of
-    a list of images that ought be displayed. Only one image is rendered at a time.
+    and a pane for image display. Child classes may establish overrides for methods
+    used to manage a display index, used to track the active element from a list of
+    images that ought be displayed. Only one image is rendered at a time.
     """
 
     def __init__(
@@ -147,7 +151,6 @@ class DisplayManager(tk.Frame):
         self.pack_propagate(False)
 
         self.on_update_do: Callable = cmd_on_update
-        self.display_index = 0
         self.display_image: Image.Image | None = None
 
         self._l_status = tk.Label(self, text="No image loaded.")
@@ -173,27 +176,36 @@ class DisplayManager(tk.Frame):
         self._l_image.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
 
     def reset(self):
-        self.display_index = 0
+        self.set_display_index(0)
         self.on_update()
 
     def on_update(self):
         self.on_update_do()
 
     def max_index(self) -> int:
-        return 0
+        """should return the last index usable from an iterable object representing images for display"""
+        raise RuntimeError("function not implemented")
+
+    def set_display_index(self, val: int):
+        raise RuntimeError("function not implemented")
+
+    def get_display_index(self):
+        raise RuntimeError("function not implemented")
 
     def incr_display(self):
-        if self.display_index == self.max_index():
-            self.display_index = 0
+        i = self.get_display_index()
+        if i == self.max_index():
+            self.set_display_index(0)
         else:
-            self.display_index += 1
+            self.set_display_index(i + 1)
         self.on_update()
 
     def decr_display(self):
-        if self.display_index == 0:
-            self.display_index = self.max_index()
+        i = self.get_display_index()
+        if i == 0:
+            self.set_display_index(self.max_index())
         else:
-            self.display_index -= 1
+            self.set_display_index(i - 1)
         self.on_update()
 
     def display_from_path(self, png_path, dir=""):
@@ -264,3 +276,123 @@ class DisplayManager(tk.Frame):
         target_height = int(image.height * scale_factor)
 
         return image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+
+
+class SuggestBox(tk.Frame):
+    def __init__(self, master, color="black"):
+        super().__init__(
+            master=master,
+            height=3,
+            width=50,
+            highlightbackground="gray",
+            highlightthickness=2,
+        )
+        self.__l_opt1 = tk.Label(
+            self, text="Option 1", fg=color, font=("Helvetica", 10, "bold")
+        )
+        self.__l_opt1.grid(column=0, row=0, sticky="w")
+        self.__l_opt2 = tk.Label(
+            self, text="Option 2", fg=color, font=("Helvetica", 10, "bold")
+        )
+        self.lighten_foreground_color(self.__l_opt2, color, 0.165)
+        self.__l_opt2.grid(column=0, row=1, sticky="w")
+        self.__l_opt3 = tk.Label(
+            self, text="Option 3", fg=color, font=("Helvetica", 10, "bold")
+        )
+        self.lighten_foreground_color(self.__l_opt3, color, 0.33)
+        self.__l_opt3.grid(column=0, row=2, sticky="w")
+        self.labels = [self.__l_opt1, self.__l_opt2, self.__l_opt3]
+        self.selected = None
+        self.default_label_bg_color = self.__l_opt1.cget("bg")
+        self.clear()
+
+    def navigate(self, dir):
+        if self.selected:
+            if dir > 0:
+                if self.selected == self.labels[1]:
+                    self.select(self.labels[0])
+                elif self.selected == self.labels[2]:
+                    self.select(self.labels[1])
+            elif dir < 0:
+                if self.selected == self.labels[0]:
+                    self.select(self.labels[1])
+                elif self.selected == self.labels[1]:
+                    self.select(self.labels[2])
+        else:
+            self.select(self.labels[0])
+
+    def select(self, label):
+        self.deselect()
+        if label.cget("text"):
+            self.selected = label
+            label.config(bg="gold")
+
+    def deselect(self):
+        if self.selected:
+            self.selected.config(bg=self.default_label_bg_color)
+            self.selected = None
+
+    def set_label_text(self, label, text):
+        label.config(text=text)
+
+    def update(self, options: list[str] = []):
+        super().update()
+        # if the first option is empty, it means that no text is entered
+        if len(options) == 0 or not options[0]:
+            self.clear()
+            return
+        for i in range(0, 3):
+            if i > (len(options) - 1):
+                self.set_label_text(self.labels[i], "")
+                continue
+            self.set_label_text(self.labels[i], options[i])
+
+    def clear(self):
+        for label in self.labels:
+            self.set_label_text(label, "")
+        self.deselect()
+
+    def lighten_foreground_color(self, label, color, amount):
+        """
+        Lightens a hexadecimal color by a given amount and updates the label's background.
+        Amount should be between 0 and 1, where 1 means full white.
+        """
+        rgb_tuple = label.winfo_rgb(color)  # Returns a tuple like (0, 0, 65535)
+        hex_color = "#%02x%02x%02x" % (
+            rgb_tuple[0] // 256,
+            rgb_tuple[1] // 256,
+            rgb_tuple[2] // 256,
+        )
+
+        if not (0 <= amount <= 1):
+            raise ValueError("Amount must be between 0 and 1.")
+
+        # Convert hex to RGB tuple
+        hex_color = hex_color.lstrip("#")
+        rgb = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+
+        # Lighten each RGB component
+        lightened_rgb = []
+        for component in rgb:
+            new_component = int(component + (255 - component) * amount)
+            lightened_rgb.append(
+                min(255, new_component)
+            )  # Ensure value doesn't exceed 255
+
+        # Convert back to hex
+        lightened_hex = "#%02x%02x%02x" % tuple(lightened_rgb)
+        label.config(fg=lightened_hex)
+
+
+class EditorTab(tk.Frame):
+    def __init__(
+        self,
+        master: tk.Misc | None,
+        height: int,
+    ):
+        super().__init__(
+            master=master,
+            height=height,
+        )
+
+        self.pack(padx=5, pady=5)
