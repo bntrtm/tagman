@@ -1,3 +1,4 @@
+from helpers import get_widget_space
 from PIL import ImageFile, ImageTk, Image
 from log_format import str_tail_after
 from typing import Callable
@@ -123,9 +124,9 @@ class AddTxtQueueWin(Window):
         )
 
 
-class DisplayManager:
+class DisplayManager(tk.Frame):
     """
-    DisplayManager is a window consisting of navigation buttons, a refresh button,
+    DisplayManager is a frame consisting of navigation buttons, a refresh button,
     and a pane for image display. An internal index is used to track the index of
     a list of images that ought be displayed. Only one image is rendered at a time.
     """
@@ -136,40 +137,40 @@ class DisplayManager:
         height: int,
         cmd_on_update: Callable,
     ):
-        self.on_update_do: Callable = cmd_on_update
-        self.display_index = 0
-        self.display_image: Image.Image | None = None
-
-        self.__p_viewer = tk.Frame(
-            master,
+        super().__init__(
+            master=master,
             height=height,
             highlightbackground="gray",
             highlightthickness=2,
         )
-        self.__p_viewer.pack(
-            anchor="e", side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5
-        )
-        self.__p_viewer.pack_propagate(False)
-        self.__l_viewer = tk.Label(self.__p_viewer, text="No image loaded.")
-        self.__l_viewer.pack(anchor="w")
+        self.pack(anchor="e", side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.pack_propagate(False)
 
-        self.__p_display_nav = tk.Frame(self.__p_viewer)
-        self.__p_display_nav.pack(side=tk.TOP, anchor="center")
-        self.__bt_decrdisplay = tk.Button(
-            self.__p_display_nav, text=" <- ", command=self.decr_display
-        )
-        self.__bt_decrdisplay.grid(column=0, row=0)
-        self.__bt_refresh = tk.Button(
-            self.__p_display_nav, text="Refresh", command=self.on_update
-        )
-        self.__bt_refresh.grid(column=1, row=0, columnspan=2)
-        self.__bt_incrdisplay = tk.Button(
-            self.__p_display_nav, text=" -> ", command=self.incr_display
-        )
-        self.__bt_incrdisplay.grid(column=3, row=0)
+        self.on_update_do: Callable = cmd_on_update
+        self.display_index = 0
+        self.display_image: Image.Image | None = None
 
-        self.__l_image = tk.Label(self.__p_viewer)
-        self.__l_image.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
+        self._l_status = tk.Label(self, text="No image loaded.")
+        self._l_status.pack(anchor="w")
+
+        self._f_nav_buttons = tk.Frame(self)
+        self._f_nav_buttons.pack(side=tk.TOP, anchor="center")
+
+        # decr button
+        tk.Button(self._f_nav_buttons, text=" <- ", command=self.decr_display).grid(
+            column=0, row=0
+        )
+        # refresh button
+        tk.Button(self._f_nav_buttons, text="Refresh", command=self.on_update).grid(
+            column=1, row=0, columnspan=2
+        )
+        # incr button
+        tk.Button(self._f_nav_buttons, text=" -> ", command=self.incr_display).grid(
+            column=3, row=0
+        )
+
+        self._l_image = tk.Label(self)
+        self._l_image.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
 
     def reset(self):
         self.display_index = 0
@@ -199,12 +200,12 @@ class DisplayManager:
         if png_path and png_path.endswith(".png"):
             self._load_image(png_path)
             self._render_image()
-            if self.__l_viewer:
+            if self._l_status:
                 if dir:
-                    self.__l_viewer.config(
+                    self._l_status.config(
                         text=f"Current: {str_tail_after(dir, '/')}...{str_tail_after(png_path, '/')}"
                     )
-                self.__l_viewer.config(
+                self._l_status.config(
                     text=f"Current: ...{str_tail_after(png_path, '/')}"
                 )
         else:
@@ -215,21 +216,13 @@ class DisplayManager:
             raise ValueError("could not load image; filepath was empty")
 
         try:
-            self.__p_viewer.update_idletasks()
-            inner_master_h, inner_master_w = get_widget_inner_canvas_size(
-                self.__p_viewer
-            )
-            inner_viewer_h = get_widget_inner_canvas_size(self.__l_viewer)[0]
-            inner_nav_h = get_widget_inner_canvas_size(self.__p_display_nav)[0]
-            available_height, available_width = (
-                inner_master_h - inner_viewer_h - inner_nav_h,
-                inner_master_w,
-            )
-
             img = Image.open(file_path)
-            self.display_image = self.fit_image_to_height(
-                img, (available_height, available_width)
-            )
+
+            manager_space = get_widget_space(self)
+            status_h = get_widget_space(self._l_status)[1]
+            nav_h = get_widget_space(self._f_nav_buttons)[1]
+            display_space = (manager_space[0], manager_space[1] - status_h - nav_h)
+            self.display_image = self.fit_image_to_size(img, display_space)
         except Exception as e:
             raise e
 
@@ -241,45 +234,33 @@ class DisplayManager:
         if not self.display_image:
             raise ValueError("No image has been loaded for display.")
 
-        self.__l_image.update_idletasks()
-        self.__l_image.update()
+        self.update_idletasks()
         tk_image = ImageTk.PhotoImage(
             self.display_image
         )  # convert for tkinter compatibility
-        self.__l_image.config(image=tk_image)
-        self.__l_image.image = tk_image  # type: ignore
+        self._l_image.config(image=tk_image)
+        self._l_image.image = tk_image  # type: ignore
 
-    def fit_image_to_height(
+    def fit_image_to_size(
         self, image: ImageFile.ImageFile, available_size: tuple[int, int]
     ) -> Image.Image | None:
         """
-        fit_image_to_height calculates the new aspect ratio required for
-        resizing the ImageFile image to fit within as much space of the
-        display pane as possible, and returns an Image with this ratio
-        applied.
+        fit_image_to_size calculates the new aspect ratio required for
+        resizing image represented by the given ImageFile to fit within
+        as much of the available space of the display pane as possible.
+
+        It returns an Image with this ratio applied.
         """
         if not image:
             return None
 
         # get original aspect ratio as width/height
-        ratio_h = available_size[0] / image.height
-        ratio_w = available_size[1] / image.width
+        ratio_w = available_size[0] / image.width
+        ratio_h = available_size[1] / image.height
 
         scale_factor = min(ratio_w, ratio_h)
 
-        target_height = int(image.height * scale_factor)
         target_width = int(image.width * scale_factor)
+        target_height = int(image.height * scale_factor)
 
         return image.resize((target_width, target_height), Image.Resampling.LANCZOS)
-
-
-def get_widget_inner_canvas_size(widget: tk.Misc):
-    height = widget.winfo_height()
-    width = widget.winfo_width()
-    bd = int(widget.cget("borderwidth"))
-    ht = int(widget.cget("highlightthickness"))
-    pady = int(widget.cget("pady"))
-    padx = int(widget.cget("padx"))
-    height_loss = (bd + ht + pady) * 2
-    width_loss = (bd + ht + padx) * 2
-    return height - height_loss, width - width_loss
