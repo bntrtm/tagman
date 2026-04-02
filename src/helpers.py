@@ -1,18 +1,4 @@
-from warnings import deprecated
 import tkinter as tk
-
-
-@deprecated("use get_widget_space")
-def get_widget_inner_canvas_size(widget: tk.Misc):
-    height = widget.winfo_height()
-    width = widget.winfo_width()
-    bd = int(widget.cget("borderwidth"))
-    ht = int(widget.cget("highlightthickness"))
-    pady = int(widget.cget("pady"))
-    padx = int(widget.cget("padx"))
-    height_loss = (bd + ht + pady) * 2
-    width_loss = (bd + ht + padx) * 2
-    return height - height_loss, width - width_loss
 
 
 def get_widget_space(widget: tk.Widget) -> tuple[int, int]:
@@ -33,3 +19,25 @@ def get_widget_space(widget: tk.Widget) -> tuple[int, int]:
     available_h = widget_h - widget_bordering - widget_padding_h
 
     return (available_w, available_h)
+
+
+def on_focus_in_entry_widget(event, widget, placeholder_text):
+    if isinstance(widget, tk.Entry):
+        text = widget.get()
+    elif isinstance(widget, tk.Text):
+        text = widget.get("1.0", "end-1c")  # USED FOR TEXT WIDGETS ONLY
+    else:
+        return
+    if text == placeholder_text:
+        widget.delete(0, "end")
+        widget.config(fg="black")
+
+
+def on_focus_out_entry_widget(event, widget, placeholder_text):
+    if isinstance(widget, tk.Entry):
+        text = widget.get()
+    elif isinstance(widget, tk.Text):
+        text = widget.get("1.0", "end-1c")  # USED FOR TEXT WIDGETS ONLY
+    if len(text) == 0:
+        widget.config(fg="gray")
+        widget.insert(tk.END, placeholder_text)
