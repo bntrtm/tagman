@@ -314,7 +314,6 @@ class TagManagerWin(Window):
         self.display_tagbox_grid()
 
     def display_tags_as_boxes(self, widget, tag_string, reload=True):
-        # FIXME: when entering an already existing tag, SOME existing tag is generated (though no doubles are added, as intended)
         """Deletes tagboxes that should not exist, adds those that should"""
         tag_strs = tag_string.rstrip(", ").split(", ")
         if len(self.tag_btlist) > 0:
