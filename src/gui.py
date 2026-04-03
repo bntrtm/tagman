@@ -58,7 +58,7 @@ class TagManagerWin(Window):
 
         def build_info_frame():
             self.__p_info = tk.Frame(
-                self._root,
+                self._f_master,
                 height=1,
                 width=gui_width,
                 highlightbackground="gray",
