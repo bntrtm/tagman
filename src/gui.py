@@ -119,10 +119,6 @@ class TagManagerWin(Window):
         self._root.bind("<Control-Right>", self.incr_display_handle)
         self._root.bind("<Control-Left>", self.decr_display_handle)
 
-    def redraw(self):
-        super().redraw()
-        self.refresh()
-
     def refresh(self):
         if self.state.dataset:
             self._f_header.refresh()
@@ -246,11 +242,15 @@ class Editor(tk.Frame):
         self.set_caption_display_text(txt_caption)
         self.display_tags_as_boxes(self._f_tag_container, txt_caption)
 
+    def refresh(self):
+        self.load_caption(self.state.get_display_path())
+
     def add_new_tagbox(self, tag):
         new_bt = TagBox(
             self.state,
             self._f_tag_container,
             self.tag_click_mode,
+            self.refresh,
             tag,
         )
         self.tag_btlist.append(new_bt)

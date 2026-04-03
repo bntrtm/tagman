@@ -1,3 +1,4 @@
+from typing import Callable
 from state import State
 import tkinter as tk
 
@@ -8,10 +9,12 @@ class TagBox(tk.Button):
         state: State,
         master: tk.Widget,
         tag_click_mode: tk.StringVar,
+        on_press_event: Callable,
         tag: str,
     ):
         self.state = state
         self.tag_click_mode = tag_click_mode
+        self.on_press_event = on_press_event
         self.tag_text = tag
         super().__init__(master, text=tag, command=self.devise_action)
         self.is_trigger: bool = tag == self.state.dataset.trigger_word
@@ -40,3 +43,5 @@ class TagBox(tk.Button):
                 self.state.dataset.add_tag_to_image_caption(self.tag_text, all=True)
             case _:
                 raise ValueError("only 'Delete' and 'Apply_All' are acceptable actions")
+        if self.on_press_event:
+            self.on_press_event()
