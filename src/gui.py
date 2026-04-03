@@ -19,8 +19,10 @@ class PNGDisplayManager(DisplayManager):
     ):
         super().__init__(master, height, cmd_on_update)
         self.state: State = state
+        self.last_displayed: str = ""
 
     def on_update(self):
+        self.last_displayed = ""
         self.display_from_path(
             self.state.get_display_path(), self.state.dataset.directory
         )
@@ -36,8 +38,9 @@ class PNGDisplayManager(DisplayManager):
         return self.state.display_index
 
     def display_from_path(self, png_path, dir=""):
-        if not self.state.dataset:
+        if not self.state.dataset or png_path == self.last_displayed:
             return
+        self.last_displayed = png_path
         super().display_from_path(png_path, dir)
 
 
