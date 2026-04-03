@@ -1,4 +1,4 @@
-from graphics import Window
+from components import Window
 from structures import Trie, Queue
 from log_format import str_tail_after
 import os
