@@ -41,48 +41,61 @@ class PNGDisplayManager(DisplayManager):
         super().display_from_path(png_path, dir)
 
 
+class Header(tk.Frame):
+    def __init__(self, master: tk.Misc | None, state: State):
+        super().__init__(
+            master=master,
+            highlightbackground="gray",
+            highlightthickness=1,
+            pady=2,
+            padx=2,
+        )
+
+        self.state = state
+
+        self.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._l_dir = tk.Label(
+            self,
+            text=f"Working under directory: {self.state.dataset.directory}",
+        )
+        self._l_dir.pack(side=tk.LEFT)
+        self._l_index_counter = tk.Label(self, text="N/A")
+        self._l_index_counter.pack(side=tk.RIGHT, padx=5)
+
+    def refresh(self):
+        self.set_directory_text()
+        self.update_index_counter()
+
+    def set_directory_text(self):
+        text = "No dataset in memory. Load a directory to begin."
+        if self.state.dataset and self.state.dataset.directory:
+            text = f"Working under directory: {self.state.dataset.directory}"
+        self._l_dir.config(text=text)
+
+    def update_index_counter(self):
+        text = "N/A"
+        if self.state.dataset:
+            text = f"{self.state.display_index + 1}/{len(self.state.dataset)}"
+        self._l_index_counter.config(text=text)
+
+
 class TagManagerWin(Window):
     def __init__(self, state: State, gui_width, gui_height, title="Tagman"):
         super().__init__(gui_width, gui_height, title=title)
 
         self.state = state
 
-        self.__p_info = None
-        self.__bt_load_dir = None
-        self.__l_info = None
-        self._l_index_counter = None
-        self.__p_hrzbox = None
-        self._caption_txt_field = None
-        self.__p_tag_radio_bts = None
-        self.tag_click_mode: tk.StringVar = tk.StringVar()
+        # heading widget holds the Load button and info about the dataset directory
+        heading = tk.Frame(master=self._f_master)
+        heading.pack(side=tk.TOP, fill=tk.X, expand=True)
+        tk.Button(heading, text="Load", command=self.load_directory).pack(side=tk.LEFT)
+        self._f_header = Header(heading, self.state)
+        self._f_header.pack(side=tk.LEFT, padx=5)
 
-        def build_info_frame():
-            self.__p_info = tk.Frame(
-                self._f_master,
-                height=1,
-                width=gui_width,
-                highlightbackground="gray",
-                highlightthickness=2,
-            )
-            self.__p_info.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
-            self.__bt_load_dir = tk.Button(
-                self.__p_info, text="Load", command=self.load_directory
-            )
-            self.__bt_load_dir.pack(side=tk.LEFT)
-            self.__l_info = tk.Label(
-                self.__p_info,
-                text=f"Working under directory: {self.state.dataset.directory}",
-            )
-            self.__l_info.pack(side=tk.LEFT)
-            self._l_index_counter = tk.Label(self.__p_info, text="N/A")
-            self._l_index_counter.pack(side=tk.RIGHT, padx=5)
+        self._p_hrzbox = tk.Frame(self._f_master)
+        self._p_hrzbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        build_info_frame()
-
-        self.__p_hrzbox = tk.Frame(self._f_master)
-        self.__p_hrzbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        self.editor: Editor = Editor(self.__p_hrzbox, gui_height, self.state)
+        self.editor: Editor = Editor(self._p_hrzbox, gui_height, self.state)
         self.editor.pack(
             anchor="w", side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5
         )
@@ -94,7 +107,7 @@ class TagManagerWin(Window):
         )
 
         self.display: PNGDisplayManager = PNGDisplayManager(
-            self.__p_hrzbox, gui_height, self.refresh, self.state
+            self._p_hrzbox, gui_height, self.refresh, self.state
         )
         self.display.pack(
             anchor="w", side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5
@@ -109,7 +122,7 @@ class TagManagerWin(Window):
 
     def refresh(self):
         if self.state.dataset:
-            self.update_index_counter_label_text()
+            self._f_header.refresh()
             self.editor.load_caption(self.state.get_display_path())
 
     def load_directory(self):
@@ -123,10 +136,6 @@ class TagManagerWin(Window):
                 f"No valid images were found under directory {self.state.dataset.directory}"
             )
             pass
-        if self.__l_info:
-            self.__l_info.config(
-                text=f"Working under directory: {self.state.dataset.directory}"
-            )
 
         # HACK: self.refresh() used to be here.
         # But we need to render the image on first load.
@@ -143,17 +152,6 @@ class TagManagerWin(Window):
     def decr_display_handle(self, event):
         """For non-Button widget events passing 'event' as an argument"""
         self.display.decr_display()
-
-    def update_index_counter_label_text(self):
-        text = "N/A"
-        if not self.state.dataset or not self.display:
-            return text
-        if len(self.state.dataset) == 0:
-            return text
-        text = f"{self.state.display_index + 1}/{len(self.state.dataset)}"
-        if self._l_index_counter is not None:
-            self._l_index_counter.config(text=text)
-        return text
 
     def on_resize(self, event):
         pass
