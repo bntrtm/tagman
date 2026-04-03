@@ -1,6 +1,6 @@
 [project]
 name = "tagman"
-version = "0.1.0"
+version = "1.0.0"
 description = "Application providing an efficient and user-friendly GUI for tagging PNG datasets with TXT files."
 readme = "README.md"
 requires-python = ">=3.13"
