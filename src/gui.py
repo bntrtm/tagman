@@ -1,9 +1,9 @@
+from components import DisplayManager, Window, EditorTab, SuggestBox
 from helpers import on_focus_in_entry_widget, on_focus_out_entry_widget
 from tags import TagBox
 from state import State
 import tkinter.filedialog
 from typing import Callable
-from graphics import Window, DisplayManager, EditorTab, SuggestBox
 import tkinter as tk
 from tkinter import ttk
 import os
