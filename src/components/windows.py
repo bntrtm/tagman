@@ -18,7 +18,6 @@ class Window:
         self._f_master.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         # SET STRICT SIZE:
         self._f_master.pack_propagate(False)
-        self._f_master.config(bg="red")
 
     def redraw(self):
         self._root.update_idletasks()
