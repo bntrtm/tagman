@@ -119,10 +119,18 @@ class TagManagerWin(Window):
         self._root.bind("<Control-Right>", self.incr_display_handle)
         self._root.bind("<Control-Left>", self.decr_display_handle)
 
-    def refresh(self):
+    def end_queue(self):
+        super().end_queue()
+        # add override to ensure GUI is updated after
+        # txt file creation
+        self.refresh()
+
+    def refresh(self, update_display: bool = False):
         if self.state.dataset:
             self._f_header.refresh()
             self.editor.load_caption(self.state.get_display_path())
+        if update_display:
+            self.display.on_update()
 
     def load_directory(self):
         directory = tkinter.filedialog.askdirectory()
@@ -136,13 +144,7 @@ class TagManagerWin(Window):
             )
             pass
 
-        # HACK: self.refresh() used to be here.
-        # But we need to render the image on first load.
-        # Yet we can't do that AND display.on_update, or else an infinite
-        # loop occurs. So here, we just call display.on_update directly.
-        # This works EXACTLY as intended...but it doesn't logically flow.
-        self.display.on_update()
-        # self.refresh()
+        self.refresh(update_display=True)
 
     def incr_display_handle(self, event):
         """For non-Button widget events passing 'event' as an argument"""

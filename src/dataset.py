@@ -18,14 +18,15 @@ class Dataset:
 
         if make_empty or win is None:
             return
-        if os.path.isdir(self.directory) and not make_empty:
+        if os.path.isdir(self.directory):
             self.expand_dataset_recursive(self.directory)
         # prompt user for action on .png files unaccompanied by .txt files
         if self.add_txt_queue is not None and self.win.active_queue_win is None:
             self.win.start_queue(
                 self.add_txt_queue, func_on_yes=self.add_dataset_element
             )
-        while self.win.active_queue_win is not None:  # type: ignore
+        while self.win and self.win.active_queue_win is not None:
+            # wait for queue popups to be handled
             pass
 
         if self.cache:

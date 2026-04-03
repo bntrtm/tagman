@@ -30,7 +30,7 @@ class Window:
         print("Window closed.")
 
     def start_queue(self, queue, func_on_yes=None):
-        self.active_queue_win = AddTxtQueueWin(
+        self.active_queue_win = QueuePopup(
             300, 125, queue, self, func_on_yes=func_on_yes
         )
         self.active_queue_win.progress()
@@ -43,16 +43,16 @@ class Window:
         self.active_queue_win = None
 
     def close(self):
-        self._is_running = False
+        self.__is_running = False
         self._root.destroy()
 
     def on_resize(self, event):
         pass
 
 
-class AddTxtQueueWin(Window):
+class QueuePopup(Window):
     """
-    AddTxtQueueWin is a popup window that demands user action
+    QueuePopup is a popup window that demands user action
     before returning control back to a parent window.
     """
 
@@ -111,9 +111,9 @@ class AddTxtQueueWin(Window):
             self.progress()
 
     def progress(self):
-        if self.queue is not None:
+        if self.queue:
             self.current = self.queue.pop()
-        if self.current is None:
+        if not self.current:
             self.queue = None
             self.caller_win.end_queue()
             return
@@ -121,5 +121,10 @@ class AddTxtQueueWin(Window):
             self.confirm_yes()
             return
         self.__l_info.config(
+            # TODO: Find a way to separate this from the popup class.
+            # In theory, an optional "prompt" input could be plugged in here,
+            # but then it couldn't format it with the path.
+            # The fix will likely involve a Queue subclass of some sort that
+            # could push a prompt along with the item.
             text=f"No corresponding .txt file exists for image: \n'{self.current}'. \nWould you like to create one?"
         )
